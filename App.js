@@ -9,13 +9,6 @@ import {
 } from 'react-native';
 import axios from 'axios'
 
-const {
-  width: SCREEN_WIDTH,
-  height: SCREEN_HEIGHT,
-} = Dimensions.get('window');
-
-const FONT_SCALE = SCREEN_WIDTH / 100;
-
 const padStart = (str) => {
   return String(str).padStart(2, '0')
 }
@@ -42,11 +35,14 @@ function getTimeStr(dateTime) {
 class HKOTime extends Component {
   constructor(props) {
     super(props);
+    const { width, height } = Dimensions.get('window')
     this.state = {
       dateTime: new Date(),
       err: false,
       appState: 'active',
-      lastSync: null
+      lastSync: null,
+      ww: width,
+      wh: height
     }
     this.appState = null
     this.syncTime = this.syncTime.bind(this)
@@ -54,6 +50,13 @@ class HKOTime extends Component {
   }
 
   componentDidMount() {
+    this.dimensions = Dimensions.addEventListener('change', ({ window }) => {
+      const { width, height } = window
+      if (this.state.ww !== width) {
+        this.setState({ ww: width, wh: height })
+      }
+    })
+
     StatusBar.setHidden(true)
     
     this.appState = AppState.addEventListener('change', (nextState) => {
@@ -72,6 +75,9 @@ class HKOTime extends Component {
   componentWillUnmount() {
     if (this.appState) {
       this.appState.remove()
+    }
+    if (this.dimensions) {
+      this.dimensions.remove()
     }
     clearInterval(this.syncTimer)
   }
@@ -119,7 +125,14 @@ class HKOTime extends Component {
   }
 
   render() {
-    const { dateTime, err, lastSync } = this.state
+    const { dateTime, err, lastSync, ww, wh } = this.state
+    const fontScale = ww / 100
+    const dateFontSize = 9 * fontScale
+    const timeFontSize = 16 * fontScale
+    const syncFontSize = 2.8 * fontScale
+    
+    const border = wh * 0.08
+    const borderStyle = [ styles.padding, { flexBasis: border } ]
 
     const date = getDateStr(dateTime)
     const time = getTimeStr(dateTime)
@@ -128,19 +141,20 @@ class HKOTime extends Component {
     
     const syncStr = `${hasErr ? "Connection Error \n Last synchronized" : "Last Synchronized"}: \n${lastSync instanceof Date ? 
       getTimeStr(lastSync) + ", " + getDateStr(lastSync) : 'Never '}`
-    const syncStyle = hasErr ? [ styles.sync, styles.err ] : styles.sync
+    const syncStyle = hasErr ? [ styles.sync, styles.err, { fontSize: syncFontSize } ] : [ styles.sync, { fontSize: syncFontSize }]
+
 
     return (
       <View style={styles.root} onTouchStart={this.onTouchStart}>
-        <View style={styles.padding} />
-        <View style={styles.main} >
-          <Text style={styles.time}>{time}</Text>
-          <View style={styles.dateSyncContainer}>
-            <Text style={styles.date}>{date}</Text>
-            <Text style={syncStyle} >{syncStr}</Text>
+        <View style={borderStyle} />
+        <View style={[ styles.main,  { paddingLeft: ww * 0.05 } ]} >
+          <Text style={[ styles.time, { fontSize: timeFontSize } ]}>{time}</Text>
+          <View style={[styles.dateSyncContainer, { paddingRight: ww * 0.02 }]}>
+            <Text style={[ styles.date, { fontSize: dateFontSize } ]}>{date}</Text>
+            <Text style={syncStyle}>{syncStr}</Text>
           </View>
         </View>
-        <View style={styles.padding} />
+        <View style={borderStyle} />
       </View>
     )
   }
@@ -160,13 +174,12 @@ const styles = StyleSheet.create({
   },
   padding: {
     backgroundColor: blue,
-    flexBasis: '10%',
+    // flexBasis: '10%',
     flex: 0
   },
   main: {
     backgroundColor: black,
     flex: 1,
-    paddingLeft: '5%',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between'
@@ -176,22 +189,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingRight: '2%',
     flexWrap: 'wrap'
   },
   date: {
-    fontSize: 12 * FONT_SCALE, // 150
     fontFamily: 'Myriad Pro Semibold',
     color: textColor,
   },
   time: {
-    fontSize: 20 * FONT_SCALE, // 250
     fontFamily: 'Myriad Pro Semibold',
     color: textColor,
   },
   sync: {
     fontFamily: "Myriad Pro Semibold",
-    fontSize: 3.6 * FONT_SCALE, // 48
     color: textColor,
   },
   err: {
