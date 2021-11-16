@@ -160,6 +160,7 @@ class HKOTime extends Component {
     const borderBlue = 'rgb(0, 43, 84)'  // 'rgb(123, 160, 240)'
     const bgBlack = 'black'
     const textWhite = "#FAFAFA"
+    const errorRed = '#F44336'
 
     const borderStyle = [ styles.padding, { backgroundColor: borderBlue, flexBasis: border } ]
 
@@ -168,10 +169,9 @@ class HKOTime extends Component {
 
     const hasErr = err || !(lastSync instanceof Date)
     
-    const syncStr = `${hasErr ? "Connection Error \n Last synchronized" : "Last Synchronized"}: \n${lastSync instanceof Date ? 
-      getTimeStr(lastSync) + ", " + getDateStr(lastSync) : 'Never '}`
-    const syncStyle = hasErr ? [ styles.sync, styles.err, { fontSize: syncFontSize } ] : [ styles.sync, { fontSize: syncFontSize }]
-
+    const syncStr = lastSync instanceof Date ? getTimeStr(lastSync) + ", " + getDateStr(lastSync) : 'Never'
+    const syncColor = hasErr ? errorRed : textWhite
+    const syncStyle = [ styles.sync, { color: syncColor, fontSize: syncFontSize } ]
 
     return (
       <View style={styles.root} onTouchStart={this.onTouchStart}>
@@ -180,7 +180,11 @@ class HKOTime extends Component {
           <Text style={[ styles.time, { color: textWhite, fontSize: timeFontSize } ]}>{time}</Text>
           <View style={[styles.dateSyncContainer, { color: textWhite, paddingRight }]}>
             <Text style={[ styles.date, { color: textWhite, fontSize: dateFontSize } ]}>{date}</Text>
-            <Text style={syncStyle}>{syncStr}</Text>
+            <View >
+              {hasErr && <Text style={syncStyle} numberOfLines={1}>Connection Error</Text>}
+              <Text style={syncStyle}>Last synchronization</Text>
+              <Text style={syncStyle}>{syncStr}</Text>
+            </View>
           </View>
         </View>
         <View style={borderStyle} />
@@ -213,7 +217,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    flexWrap: 'wrap'
+    flexWrap: 'nowrap',
+    paddingBottom: 8
+  },
+  syncContainer: {
+
   },
   date: {
     fontFamily: 'Myriad Pro Semibold',
@@ -223,9 +231,6 @@ const styles = StyleSheet.create({
   },
   sync: {
     fontFamily: "Myriad Pro Semibold",
-  },
-  err: {
-    color: '#f44336',
   }
 });
 
