@@ -182,7 +182,7 @@ class HKOTime extends Component {
             <Text style={[ styles.date, { color: textWhite, fontSize: dateFontSize } ]}>{date}</Text>
             <View >
               {hasErr && <Text style={syncStyle} numberOfLines={1}>Connection Error</Text>}
-              <Text style={syncStyle}>Last synchronization</Text>
+              <Text style={syncStyle}>Last synchronization:</Text>
               <Text style={syncStyle}>{syncStr}</Text>
             </View>
           </View>
