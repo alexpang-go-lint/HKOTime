@@ -64,7 +64,6 @@ class HKOTime extends Component {
         if (nextState === 'active') {
           this.syncTime()
         }
-        console.log(nextState, this.state.appState)
         this.setState({ appState: nextState })
       }
     })
@@ -126,11 +125,13 @@ class HKOTime extends Component {
 
   render() {
     const { dateTime, err, lastSync, ww, wh } = this.state
+
+    // Scale font size by width of screen
     const fontScale = ww / 100
-    const dateFontSize = 9 * fontScale
-    const timeFontSize = 16 * fontScale
-    const syncFontSize = 2.8 * fontScale
-    
+    const dateFontSize = 12 * fontScale
+    const timeFontSize = 20 * fontScale
+    const syncFontSize = 3.6 * fontScale
+
     const border = wh * 0.08
     const borderStyle = [ styles.padding, { flexBasis: border } ]
 
