@@ -8,6 +8,8 @@ import {
   AppState
 } from 'react-native';
 import axios from 'axios'
+import { FileLogger } from 'react-native-file-logger'
+
 
 const padStart = (str) => {
   return String(str).padStart(2, '0')
@@ -50,28 +52,35 @@ class HKOTime extends Component {
   }
 
   componentDidMount() {
-    this.dimensions = Dimensions.addEventListener('change', ({ window }) => {
-      const { width, height } = window
-      if (this.state.ww !== width) {
-        this.setState({ ww: width, wh: height })
-      }
-    })
-
-    StatusBar.setHidden(true)
-    
-    this.appState = AppState.addEventListener('change', (nextState) => {
-      if (this.state.appState !== nextState) {
-        if (nextState === 'active') {
-          this.syncTime()
+    FileLogger.configure({
+      maximumFileSize: 2 * 1024 * 1024, // 2MB
+      captureConsole: false
+    }).then(() => {
+      this.dimensions = Dimensions.addEventListener('change', ({ window }) => {
+        const { width, height } = window
+        if (this.state.ww !== width) {
+          this.setState({ ww: width, wh: height })
         }
-        this.setState({ appState: nextState })
-      }
+      })
+  
+      StatusBar.setHidden(true)
+      
+      this.appState = AppState.addEventListener('change', (nextState) => {
+        if (this.state.appState !== nextState) {
+          if (nextState === 'active') {
+            this.syncTime()
+          }
+          this.setState({ appState: nextState })
+        }
+      })
+  
+      FileLogger.info('Init: start timer to get HKO data')
+      this.initTimer()
     })
-
-    this.initTimer()
   }
 
   componentWillUnmount() {
+    FileLogger.info('Exit app')
     if (this.appState) {
       this.appState.remove()
     }
@@ -104,17 +113,25 @@ class HKOTime extends Component {
   }
 
   syncTime = (initTimer) => {
+    const sendTime = new Date().getTime()
     axios
       .get('https://www.hko.gov.hk/cgi-bin/gts/time5a.pr?')
       .then(res => {
-        const unixDate = Number(res.data.split('=')[1]) + 700
-        const time = new Date(unixDate)
-        const lastSync = new Date(unixDate)
-        this.setState({ dateTime: time, err: false, lastSync: lastSync }, () => {
+        const receiveTime = new Date().getTime()
+        const diff = (receiveTime - sendTime) + 300 // Also need to add processing & rendering time into diff
+        const hkoTime = Number(res.data.split('=')[1]) + diff
+
+        const dateTime = new Date(hkoTime)
+        const lastSync = new Date(hkoTime) // Need to be a separate instance
+        
+        FileLogger.info(`${hkoTime}; diff: ${diff}`)
+
+        this.setState({ dateTime, err: false, lastSync: lastSync }, () => {
           if (initTimer) this.initTimer()
         })
       })
       .catch(err => {
+        FileLogger.error(`An error occurred when trying to sync time: ${err}`)
         this.setState({ dateTime: new Date(), err: true })
       })
   }
@@ -126,14 +143,25 @@ class HKOTime extends Component {
   render() {
     const { dateTime, err, lastSync, ww, wh } = this.state
 
-    // Scale font size by width of screen
+    // Font sizes, scaled by screen width
     const fontScale = ww / 100
-    const dateFontSize = 12 * fontScale
-    const timeFontSize = 20 * fontScale
-    const syncFontSize = 3.6 * fontScale
+    const dateFontSize = 12 * fontScale // 96
+    const timeFontSize = 20 * fontScale // 60
+    const syncFontSize = 3.6 * fontScale // 12
 
+    // Top & Btm borders, scaled by screen height
     const border = wh * 0.08
-    const borderStyle = [ styles.padding, { flexBasis: border } ]
+
+    // Left & Right text padding, scaled by screen width
+    const paddingLeft = ww * 0.05
+    const paddingRight = ww * 0.02
+
+    // Color styles
+    const borderBlue = 'rgb(0, 43, 84)'  // 'rgb(123, 160, 240)'
+    const bgBlack = 'black'
+    const textWhite = "#FAFAFA"
+
+    const borderStyle = [ styles.padding, { backgroundColor: borderBlue, flexBasis: border } ]
 
     const date = getDateStr(dateTime)
     const time = getTimeStr(dateTime)
@@ -148,10 +176,10 @@ class HKOTime extends Component {
     return (
       <View style={styles.root} onTouchStart={this.onTouchStart}>
         <View style={borderStyle} />
-        <View style={[ styles.main,  { paddingLeft: ww * 0.05 } ]} >
-          <Text style={[ styles.time, { fontSize: timeFontSize } ]}>{time}</Text>
-          <View style={[styles.dateSyncContainer, { paddingRight: ww * 0.02 }]}>
-            <Text style={[ styles.date, { fontSize: dateFontSize } ]}>{date}</Text>
+        <View style={[ styles.main,  { backgroundColor: bgBlack, paddingLeft } ]} >
+          <Text style={[ styles.time, { color: textWhite, fontSize: timeFontSize } ]}>{time}</Text>
+          <View style={[styles.dateSyncContainer, { color: textWhite, paddingRight }]}>
+            <Text style={[ styles.date, { color: textWhite, fontSize: dateFontSize } ]}>{date}</Text>
             <Text style={syncStyle}>{syncStr}</Text>
           </View>
         </View>
@@ -161,9 +189,6 @@ class HKOTime extends Component {
   }
 }
 
-const blue = 'rgb(0, 43, 84)'  // 'rgb(123, 160, 240)'
-const black = 'black'
-const textColor = "#FAFAFA"
 
 const styles = StyleSheet.create({
   root: {
@@ -174,12 +199,10 @@ const styles = StyleSheet.create({
 
   },
   padding: {
-    backgroundColor: blue,
     // flexBasis: '10%',
     flex: 0
   },
   main: {
-    backgroundColor: black,
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
@@ -194,15 +217,12 @@ const styles = StyleSheet.create({
   },
   date: {
     fontFamily: 'Myriad Pro Semibold',
-    color: textColor,
   },
   time: {
     fontFamily: 'Myriad Pro Semibold',
-    color: textColor,
   },
   sync: {
     fontFamily: "Myriad Pro Semibold",
-    color: textColor,
   },
   err: {
     color: '#f44336',
