@@ -19,7 +19,7 @@ const padStart = (str) => {
  * 
  * @param {Date} dateTime 
  */
-function getDateStr(dateTime) {
+const getDateStr = (dateTime) => {
   const YY = String(dateTime.getFullYear()).substr(2)
   const M = padStart(dateTime.getMonth() + 1)
   const d = padStart(dateTime.getDate())
@@ -30,9 +30,11 @@ function getDateStr(dateTime) {
  *  
  * @param {Date} dateTime 
  */
-function getTimeStr(dateTime) {
+const getTimeStr = (dateTime) => {
   return `${padStart(dateTime.getHours())}:${padStart(dateTime.getMinutes())}:${padStart(dateTime.getSeconds())}`
 }
+
+const enableLogger = false
 
 class HKOTime extends Component {
   constructor(props) {
@@ -51,36 +53,55 @@ class HKOTime extends Component {
     this.syncTime()
   }
 
-  componentDidMount() {
-    FileLogger.configure({
-      maximumFileSize: 2 * 1024 * 1024, // 2MB
-      captureConsole: false
-    }).then(() => {
-      this.dimensions = Dimensions.addEventListener('change', ({ window }) => {
-        const { width, height } = window
-        if (this.state.ww !== width) {
-          this.setState({ ww: width, wh: height })
-        }
-      })
-  
-      StatusBar.setHidden(true)
-      
-      this.appState = AppState.addEventListener('change', (nextState) => {
-        if (this.state.appState !== nextState) {
-          if (nextState === 'active') {
-            this.syncTime()
-          }
-          this.setState({ appState: nextState })
-        }
-      })
-  
-      FileLogger.info('Init: start timer to get HKO data')
-      this.initTimer()
+  logInfo(msg) {
+    if (enableLogger) {
+      FileLogger.info(msg)
+    }
+  }
+
+  logError(msg) {
+    FileLogger.error(msg)
+  }
+
+  init() {
+    this.dimensions = Dimensions.addEventListener('change', ({ window }) => {
+      const { width, height } = window
+      if (this.state.ww !== width) {
+        this.setState({ ww: width, wh: height })
+      }
     })
+
+    StatusBar.setHidden(true)
+    
+    this.appState = AppState.addEventListener('change', (nextState) => {
+      if (this.state.appState !== nextState) {
+        if (nextState === 'active') {
+          this.syncTime()
+        }
+        this.setState({ appState: nextState })
+      }
+    })
+
+    this.initTimer()
+  }
+
+  componentDidMount() {
+    if (enableLogger) {
+      FileLogger.configure({
+        maximumFileSize: 2 * 1024 * 1024, // 2MB
+        captureConsole: false
+      }).then(() => {
+        this.logInfo('Init: start timer to get HKO data')
+        this.init()
+      })
+    } else {
+      this.init()
+    }
   }
 
   componentWillUnmount() {
-    FileLogger.info('Exit app')
+    this.logInfo('Exit app')
+
     if (this.appState) {
       this.appState.remove()
     }
@@ -124,14 +145,14 @@ class HKOTime extends Component {
         const dateTime = new Date(hkoTime)
         const lastSync = new Date(hkoTime) // Need to be a separate instance
         
-        FileLogger.info(`${hkoTime}; diff: ${diff}`)
+        this.logInfo(`${hkoTime}; diff: ${diff}`)
 
         this.setState({ dateTime, err: false, lastSync: lastSync }, () => {
           if (initTimer) this.initTimer()
         })
       })
       .catch(err => {
-        FileLogger.error(`An error occurred when trying to sync time: ${err}`)
+        this.logError(`An error occurred when trying to sync time: ${err}`)
         this.setState({ dateTime: new Date(), err: true })
       })
   }
