@@ -118,7 +118,7 @@ class HKOTime extends Component {
       .get('https://www.hko.gov.hk/cgi-bin/gts/time5a.pr?')
       .then(res => {
         const receiveTime = new Date().getTime()
-        const diff = (receiveTime - sendTime) + 300 // Also need to add processing & rendering time into diff
+        const diff = (receiveTime - sendTime) // Also need to add processing & rendering time into diff
         const hkoTime = Number(res.data.split('=')[1]) + diff
 
         const dateTime = new Date(hkoTime)
@@ -146,15 +146,15 @@ class HKOTime extends Component {
     // Font sizes, scaled by screen width
     const fontScale = ww / 100
     const dateFontSize = 12 * fontScale // 96
-    const timeFontSize = 20 * fontScale // 60
+    const timeFontSize = 24 * fontScale // 60
     const syncFontSize = 3.6 * fontScale // 12
 
     // Top & Btm borders, scaled by screen height
     const border = wh * 0.08
 
     // Left & Right text padding, scaled by screen width
-    const paddingLeft = ww * 0.05
-    const paddingRight = ww * 0.02
+    const paddingLeft = ww * 0.00
+    const paddingRight = ww * 0.08
 
     // Color styles
     const borderBlue = 'rgb(0, 43, 84)'  // 'rgb(123, 160, 240)'
@@ -177,9 +177,9 @@ class HKOTime extends Component {
       <View style={styles.root} onTouchStart={this.onTouchStart}>
         <View style={borderStyle} />
         <View style={[ styles.main,  { backgroundColor: bgBlack, paddingLeft } ]} >
-          <Text style={[ styles.time, { color: textWhite, fontSize: timeFontSize } ]}>{time}</Text>
+          <Text style={[ styles.time, { textAlign: 'center', color: textWhite, fontSize: timeFontSize } ]}>{time}</Text>
           <View style={[styles.dateSyncContainer, { color: textWhite, paddingRight }]}>
-            <Text style={[ styles.date, { color: textWhite, fontSize: dateFontSize } ]}>{date}</Text>
+            <Text style={[ styles.date, { paddingLeft: ww * 0.05, color: textWhite, fontSize: dateFontSize } ]}>{date}</Text>
             <View >
               {hasErr && <Text style={syncStyle} numberOfLines={1}>Connection Error</Text>}
               <Text style={syncStyle}>Last synchronization:</Text>
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     flexWrap: 'nowrap',
-    paddingBottom: 8
+    paddingBottom: 64
   },
   syncContainer: {
 
